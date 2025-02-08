@@ -144,28 +144,56 @@ const Dashboard = () => {
     return cleanup;
   }, []);
 
-  const updateSankeyData = (historyData) => {
-    if (historyData.length === 0) return;
+const updateSankeyData = (historyData) => {
+  if (!historyData || historyData.length === 0) {
+    // Set default values when no data is available
+    setSankeyData({
+      nodes: [
+        { name: 'Total Queries' },
+        { name: 'Successful' },
+        { name: 'Failed' },
+        { name: 'Within SLA' },
+        { name: 'Over SLA' },
+        { name: 'Optimized' },
+        { name: 'High Usage' }
+      ],
+      links: [
+        { source: 0, target: 1, value: 1 },
+        { source: 0, target: 2, value: 1 },
+        { source: 1, target: 3, value: 1 },
+        { source: 1, target: 4, value: 1 },
+        { source: 3, target: 5, value: 1 },
+        { source: 3, target: 6, value: 1 }
+      ]
+    });
+    return;
+  }
 
-    const totalQueries = historyData.length;
-    const successfulQueries = historyData.filter(q => q.success).length;
-    const withinSLA = historyData.filter(q => q.responseTime < 2).length;
-    const tokenOptimized = historyData.filter(q => (q.promptTokens + q.completionTokens) < 1000).length;
+  const totalQueries = Math.max(historyData.length, 1);
+  const successfulQueries = Math.max(historyData.filter(q => q.success).length, 1);
+  const withinSLA = Math.max(historyData.filter(q => q.responseTime < 2).length, 1);
+  const tokenOptimized = Math.max(historyData.filter(q => (q.promptTokens + q.completionTokens) < 1000).length, 1);
 
-    const links = [
-      { source: 0, target: 1, value: successfulQueries || 1 },
-      { source: 0, target: 2, value: (totalQueries - successfulQueries) || 1 },
-      { source: 1, target: 3, value: withinSLA || 1 },
-      { source: 1, target: 4, value: (successfulQueries - withinSLA) || 1 },
-      { source: 3, target: 5, value: tokenOptimized || 1 },
-      { source: 3, target: 6, value: (withinSLA - tokenOptimized) || 1 }
-    ];
-
-    setSankeyData(prev => ({
-      nodes: prev.nodes,
-      links
-    }));
-  };
+  setSankeyData({
+    nodes: [
+      { name: 'Total Queries' },
+      { name: 'Successful' },
+      { name: 'Failed' },
+      { name: 'Within SLA' },
+      { name: 'Over SLA' },
+      { name: 'Optimized' },
+      { name: 'High Usage' }
+    ],
+    links: [
+      { source: 0, target: 1, value: successfulQueries },
+      { source: 0, target: 2, value: Math.max(totalQueries - successfulQueries, 1) },
+      { source: 1, target: 3, value: withinSLA },
+      { source: 1, target: 4, value: Math.max(successfulQueries - withinSLA, 1) },
+      { source: 3, target: 5, value: tokenOptimized },
+      { source: 3, target: 6, value: Math.max(withinSLA - tokenOptimized, 1) }
+    ]
+  });
+};
 
   const handleReset = async () => {
     try {
