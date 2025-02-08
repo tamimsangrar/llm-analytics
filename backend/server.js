@@ -10,91 +10,97 @@ require('dotenv').config();
 const prisma = new PrismaClient();
 const app = express();
 const server = createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ 
+  server,
+  path: '/ws'
+});
 
-// More permissive CORS
+// CORS configuration
 app.use(cors({
-  origin: ['https://tz-llm-analytics.netlify.app', 'http://localhost:3000'],
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'anthropic-version'],
+  origin: true, // Allow all origins temporarily
   credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'anthropic-version']
 }));
 
-app.options('*', cors());
+app.use(express.json());
 
+// Logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   console.log('Headers:', req.headers);
   next();
 });
 
-// Add error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    error: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  });
+// WebSocket connections
+wss.on('error', (error) => {
+  console.error('WebSocket server error:', error);
 });
 
-
-
-app.use(express.json());
-
-// WebSocket connections
 wss.on('connection', (ws) => {
-  console.log('Client connected');
+  console.log('Client connected to WebSocket');
+  
+  ws.on('error', (error) => {
+    console.error('WebSocket client error:', error);
+  });
   
   ws.on('close', () => {
-    console.log('Client disconnected');
+    console.log('Client disconnected from WebSocket');
   });
 });
+
+// Broadcast updates to all connected clients
+const broadcastMetrics = async () => {
+  if (wss.clients.size === 0) return;
+
+  try {
+    const metrics = await getMetricsSummary();
+    
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'metrics-update',
+          data: metrics
+        }));
+      }
+    });
+  } catch (error) {
+    console.error('Error broadcasting metrics:', error);
+  }
+};
 
 // Get metrics summary
 async function getMetricsSummary() {
   const totalQueries = await prisma.queryMetric.count();
   
-  // Calculate success rate
+  if (totalQueries === 0) {
+    return {
+      totalQueries: 0,
+      successRate: 0,
+      averageResponseTime: 0,
+      totalCost: 0
+    };
+  }
+  
   const successfulQueries = await prisma.queryMetric.count({
     where: { success: true }
   });
-  const successRate = totalQueries > 0 ? (successfulQueries / totalQueries) * 100 : 0;
-
-  // Get average response time
+  
   const avgResponseTime = await prisma.queryMetric.aggregate({
     _avg: { responseTime: true }
   });
-
-  // Get total cost
+  
   const totalCost = await prisma.queryMetric.aggregate({
     _sum: { cost: true }
   });
 
   return {
     totalQueries,
-    successRate,
+    successRate: (successfulQueries / totalQueries) * 100,
     averageResponseTime: avgResponseTime._avg.responseTime || 0,
     totalCost: totalCost._sum.cost || 0
   };
 }
-
-// Broadcast updates to all connected clients
-const broadcastMetrics = async () => {
-  if (wss.clients.size === 0) return;
-
-  const metrics = await getMetricsSummary();
-  
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({
-        type: 'metrics-update',
-        data: metrics
-      }));
-    }
-  });
-};
 
 // Claude API handler
 async function queryClaude(prompt) {
@@ -141,11 +147,13 @@ async function queryClaude(prompt) {
 // Query endpoint
 app.post('/api/query', async (req, res) => {
   try {
+    console.log('Received query request:', req.body);
     const { prompt } = req.body;
     const result = await queryClaude(prompt);
+    console.log('Claude response:', result);
 
     // Store metrics
-    await prisma.queryMetric.create({
+    const metric = await prisma.queryMetric.create({
       data: {
         model: 'claude-3',
         promptTokens: result.usage.prompt_tokens,
@@ -157,6 +165,8 @@ app.post('/api/query', async (req, res) => {
       }
     });
 
+    console.log('Stored metric:', metric);
+
     // Broadcast updated metrics
     await broadcastMetrics();
 
@@ -165,43 +175,22 @@ app.post('/api/query', async (req, res) => {
     console.error('Query error:', error);
     
     // Store failed query metrics
-    await prisma.queryMetric.create({
-      data: {
-        model: 'claude-3',
-        promptTokens: 0,
-        completionTokens: 0,
-        cost: 0,
-        success: false,
-        responseTime: 0,
-        error: error.message
-      }
-    });
+    try {
+      await prisma.queryMetric.create({
+        data: {
+          model: 'claude-3',
+          promptTokens: 0,
+          completionTokens: 0,
+          cost: 0,
+          success: false,
+          responseTime: 0,
+          error: error.message
+        }
+      });
+    } catch (dbError) {
+      console.error('Error storing failed metric:', dbError);
+    }
 
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Track LLM query metrics
-app.post('/api/metrics', async (req, res) => {
-  try {
-    const metric = await prisma.queryMetric.create({
-      data: {
-        model: req.body.model,
-        promptTokens: req.body.promptTokens,
-        completionTokens: req.body.completionTokens,
-        cost: req.body.cost,
-        success: req.body.success,
-        responseTime: req.body.responseTime,
-        error: req.body.error
-      }
-    });
-
-    // Broadcast updates
-    await broadcastMetrics();
-
-    res.json(metric);
-  } catch (error) {
-    console.error('Error creating metric:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -212,6 +201,7 @@ app.get('/api/metrics/summary', async (req, res) => {
     const metrics = await getMetricsSummary();
     res.json(metrics);
   } catch (error) {
+    console.error('Error fetching metrics summary:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -226,25 +216,32 @@ app.get('/api/metrics/history', async (req, res) => {
     
     res.json(history);
   } catch (error) {
+    console.error('Error fetching history:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Reset metrics endpoint
 app.post('/api/metrics/reset', async (req, res) => {
-    try {
-      // Delete all records
-      await prisma.queryMetric.deleteMany({});
-      
-      // Broadcast updated metrics
-      await broadcastMetrics();
-      
-      res.json({ message: 'Metrics reset successfully' });
-    } catch (error) {
-      console.error('Error resetting metrics:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
+  try {
+    // Delete all records
+    await prisma.queryMetric.deleteMany({});
+    
+    // Broadcast updated metrics
+    await broadcastMetrics();
+    
+    res.json({ message: 'Metrics reset successfully' });
+  } catch (error) {
+    console.error('Error resetting metrics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: err.message });
+});
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
