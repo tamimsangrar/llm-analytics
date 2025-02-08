@@ -7,10 +7,13 @@ const WS_URL = import.meta.env.VITE_WS_URL;
 let ws = null;
 let metricsCallback = null;
 
+// In frontend/src/services/api.js
 export const connectWebSocket = (onMetricsUpdate) => {
   try {
-    metricsCallback = onMetricsUpdate;
-    ws = new WebSocket(WS_URL);
+    const wsUrl = `${WS_URL}/ws`;  // Add the /ws path
+    console.log('Connecting to WebSocket:', wsUrl);
+    
+    ws = new WebSocket(wsUrl);
 
     ws.onmessage = (event) => {
       try {
@@ -24,12 +27,15 @@ export const connectWebSocket = (onMetricsUpdate) => {
     };
 
     ws.onopen = () => {
-      console.log('WebSocket connected');
+      console.log('WebSocket connected successfully');
     };
 
-    ws.onclose = () => {
-      console.log('WebSocket disconnected. Attempting to reconnect...');
-      setTimeout(() => connectWebSocket(onMetricsUpdate), 3000);
+    ws.onclose = (event) => {
+      console.log('WebSocket disconnected:', event.code, event.reason);
+      // Only reconnect if it wasn't closed intentionally
+      if (event.code !== 1000) {
+        setTimeout(() => connectWebSocket(onMetricsUpdate), 3000);
+      }
     };
 
     ws.onerror = (error) => {
@@ -38,12 +44,13 @@ export const connectWebSocket = (onMetricsUpdate) => {
 
     return () => {
       if (ws) {
-        ws.close();
+        ws.close(1000, 'Closing normally');  // Clean closure
         ws = null;
       }
     };
   } catch (error) {
     console.error('WebSocket connection error:', error);
+    return () => {};  // Return empty cleanup function
   }
 };
 
