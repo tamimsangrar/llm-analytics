@@ -24,6 +24,12 @@ app.use(cors({
 
 app.options('*', cors());
 
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  next();
+});
+
 // Add error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -32,6 +38,8 @@ app.use((err, req, res, next) => {
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
+
+
 
 app.use(express.json());
 
