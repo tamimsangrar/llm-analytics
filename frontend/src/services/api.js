@@ -49,8 +49,8 @@ export const connectWebSocket = (onMetricsUpdate) => {
 
 export const submitQuery = async (prompt) => {
   try {
-    console.log('Submitting query to:', API_URL + '/query');
-    const response = await axios.post(API_URL + '/query', { prompt }, {
+    console.log('Submitting query to:', `${API_URL}/query`);
+    const response = await axios.post(`${API_URL}/query`, { prompt }, {
       headers: {
         'Content-Type': 'application/json'
       },
@@ -62,8 +62,38 @@ export const submitQuery = async (prompt) => {
       message: error.message,
       response: error.response?.data,
       status: error.response?.status,
-      url: API_URL + '/query'
+      url: `${API_URL}/query`
     });
     throw new Error(error.response?.data?.error || error.message);
+  }
+};
+
+export const fetchMetrics = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/metrics/summary`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+    throw error;
+  }
+};
+
+export const fetchHistory = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/metrics/history`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    throw error;
+  }
+};
+
+export const resetMetrics = async () => {
+  try {
+    const response = await axios.post(`${API_URL}/metrics/reset`);
+    return response.data;
+  } catch (error) {
+    console.error('Error resetting metrics:', error);
+    throw error;
   }
 };
