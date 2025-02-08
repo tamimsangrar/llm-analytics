@@ -12,12 +12,22 @@ const app = express();
 const server = createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// More permissive CORS
 app.use(cors({
-  origin: ['https://tz-llm-analytics.netlify.app', 'http://localhost:3000'],
+  origin: '*',  // Allow all origins
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'anthropic-version'],
   credentials: true
 }));
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
 
 app.use(express.json());
 
