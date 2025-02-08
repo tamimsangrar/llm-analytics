@@ -50,12 +50,16 @@ export const connectWebSocket = (onMetricsUpdate) => {
 export const submitQuery = async (prompt) => {
   try {
     console.log('Submitting query to:', `${API_URL}/query`);
-    const response = await axios.post(`${API_URL}/query`, { prompt }, {
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000 // 30 second timeout
-    });
+    const response = await axios.post(`${API_URL}/query`, 
+      { prompt }, 
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true,
+        timeout: 30000
+      }
+    );
     return response.data;
   } catch (error) {
     console.error('Query error:', {
