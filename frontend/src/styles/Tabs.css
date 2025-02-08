@@ -1,0 +1,131 @@
+/* src/styles/Tabs.css */
+.tabs-container {
+    width: 100%;
+    min-height: 100vh;
+    background-color: #f5f5f5;
+  }
+  
+  .tabs-header {
+    background: white;
+    padding: 0 24px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .tabs-nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    gap: 20px;
+  }
+  
+  .tab-button {
+    padding: 16px 24px;
+    font-size: 16px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.3s ease;
+  }
+  
+  .tab-button:hover {
+    color: #1a1a1a;
+  }
+  
+  .tab-button.active {
+    color: #1a1a1a;
+    border-bottom-color: #2563eb;
+  }
+  
+  /* Query Interface Styles */
+  .query-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  
+  .query-interface {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .query-input {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-bottom: 16px;
+    resize: vertical;
+    font-family: inherit;
+  }
+  
+  .query-input:focus {
+    outline: none;
+    border-color: #2563eb;
+  }
+  
+  .query-button {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .query-button:hover {
+    background: #1d4ed8;
+  }
+  
+  .query-button:disabled {
+    background: #93c5fd;
+    cursor: not-allowed;
+  }
+  
+  .response-container {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+  }
+  
+  .response-pending {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    color: #666;
+  }
+  
+  .token-stats {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+  }
+  
+  .token-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .token-label {
+    font-size: 12px;
+    color: #666;
+  }
+  
+  .token-value {
+    font-size: 16px;
+    font-weight: 500;
+    color: #1a1a1a;
+  }

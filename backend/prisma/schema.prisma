@@ -1,0 +1,21 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model QueryMetric {
+  id              Int      @id @default(autoincrement())
+  timestamp       DateTime @default(now())
+  model           String   
+  promptTokens    Int
+  completionTokens Int
+  cost            Float
+  success         Boolean
+  responseTime    Float    
+  error           String?
+}

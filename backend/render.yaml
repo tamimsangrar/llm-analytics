@@ -1,0 +1,18 @@
+# backend/render.yaml
+services:
+  - type: web
+    name: llm-analytics-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: llm-analytics-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+databases:
+  - name: llm-analytics-db
+    plan: free
