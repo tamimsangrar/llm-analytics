@@ -14,11 +14,15 @@ const wss = new WebSocket.Server({ server });
 
 // More permissive CORS
 app.use(cors({
-  origin: '*',  // Allow all origins
+  origin: ['https://tz-llm-analytics.netlify.app', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'anthropic-version'],
-  credentials: true
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+app.options('*', cors());
 
 // Add error handling middleware
 app.use((err, req, res, next) => {
