@@ -12,7 +12,12 @@ const app = express();
 const server = createServer(app);
 const wss = new WebSocket.Server({ server });
 
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }));
+
 app.use(express.json());
 
 // WebSocket connections
