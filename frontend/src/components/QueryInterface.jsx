@@ -1,5 +1,5 @@
-// src/components/QueryInterface.jsx
-import React, { useState } from 'react';
+// frontend/src/components/QueryInterface.jsx
+import React, { useState, useEffect } from 'react';
 import { submitQuery } from '../services/api';
 import { Loader } from 'lucide-react';
 
@@ -18,7 +18,10 @@ const QueryInterface = ({ onQueryComplete }) => {
     setResponse(null);
     
     try {
+      console.log('Sending query:', prompt);
       const result = await submitQuery(prompt);
+      console.log('Query result:', result);
+      
       setResponse(result.content);
       setQueryStats({
         promptTokens: result.usage.prompt_tokens,
@@ -26,15 +29,43 @@ const QueryInterface = ({ onQueryComplete }) => {
         cost: result.cost,
         responseTime: result.responseTime
       });
+      
       if (onQueryComplete) {
         onQueryComplete(result);
       }
     } catch (err) {
-      setError(err.message);
+      console.error('Query error:', err);
+      setError(err.message || 'An error occurred while processing your query');
     } finally {
       setLoading(false);
     }
   };
+
+  // Network status monitoring
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  if (!isOnline) {
+    return (
+      <div className="query-interface">
+        <div className="error-message">
+          You are currently offline. Please check your internet connection.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="query-interface">
@@ -53,28 +84,30 @@ const QueryInterface = ({ onQueryComplete }) => {
       >
         {loading ? (
           <>
-            <Loader className="animate-spin mr-2" />
+            <Loader className="animate-spin" />
             Processing...
           </>
         ) : 'Send Query'}
       </button>
 
       {error && (
-        <div className="response-container" style={{ color: 'red' }}>
+        <div className="error-message">
           Error: {error}
+          <br />
+          <small>If this persists, please try refreshing the page.</small>
         </div>
       )}
 
       {loading && (
-        <div className="response-container response-pending">
-          <Loader className="animate-spin mr-2" />
-          Waiting for response...
+        <div className="loading-message">
+          <Loader className="animate-spin" />
+          Processing your query...
         </div>
       )}
 
       {response && (
         <div className="response-container">
-          <div style={{ whiteSpace: 'pre-wrap' }}>{response}</div>
+          <div className="response-content">{response}</div>
           
           {queryStats && (
             <div className="token-stats">
